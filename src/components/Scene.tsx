@@ -127,21 +127,22 @@ export default function Scene() {
         <pointLight position={[0, 10, 0]} intensity={1.5} color="#ffdddd" />
 
         {/* 雪 */}
-        <points>
-          <bufferAttribute
-  attach="attributes-position"
-  args={[
-    new Float32Array(
-      Array.from({ length: 500 * 3 }, () => (Math.random() - 0.5) * 40)
-    ),
-    3,
-  ]}
-/>
+        {/* 雪 */}
+<points>
+  <bufferGeometry>
+    <bufferAttribute
+      attach="attributes-position"
+      args={[
+        new Float32Array(
+          Array.from({ length: 500 * 3 }, () => (Math.random() - 0.5) * 40)
+        ),
+        3,
+      ]}
+    />
+  </bufferGeometry>
+  <pointsMaterial color="white" size={0.1} sizeAttenuation />
+</points>
 
-
-          </bufferGeometry>
-          <pointsMaterial color="white" size={0.1} sizeAttenuation />
-        </points>
 
         {/* 🎄ツリー */}
         <mesh position={[0, 0.4, 0]}>
