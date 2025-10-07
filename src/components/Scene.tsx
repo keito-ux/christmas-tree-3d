@@ -34,11 +34,15 @@ useEffect(() => {
       { event: "INSERT", schema: "public", table: "ornaments" },
       (payload) => {
         const d = payload.new;
+
+        // ✅ ここで型をしっかり明示する
         const newOrnament: OrnamentData = {
           position: [d.x as number, d.y as number, d.z as number],
           country: d.country as string,
           message: d.message as string,
         };
+
+        // ✅ prev に型をつける（TypeScriptが安心する）
         setOrnaments((prev: OrnamentData[]) => [...prev, newOrnament]);
       }
     )
