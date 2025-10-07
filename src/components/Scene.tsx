@@ -1,4 +1,4 @@
-"use client"; // ← 一番上に！
+"use client";
 
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
@@ -23,37 +23,25 @@ export default function Scene() {
   const [message, setMessage] = useState("");
   const [country, setCountry] = useState("🇯🇵");
   const [clickPos, setClickPos] = useState<[number, number, number] | null>(null);
-  const [isAdding, setIsAdding] = useState(false); // ← 追加モードON/OFF
+  const [isAdding, setIsAdding] = useState(false);
 
   // 🎄 Supabaseから読み込み
-useEffect(() => {
-  const channel = supabase
-    .channel("ornaments-changes")
-    .on(
-      "postgres_changes",
-      { event: "INSERT", schema: "public", table: "ornaments" },
-      (payload) => {
-        const d = payload.new;
-
-        // ✅ ここで型をしっかり明示する
-        const newOrnament: OrnamentData = {
-          position: [d.x as number, d.y as number, d.z as number],
-          country: d.country as string,
-          message: d.message as string,
-        };
-
-        // ✅ prev に型をつける（TypeScriptが安心する）
-        setOrnaments((prev: OrnamentData[]) => [...prev, newOrnament]);
+  useEffect(() => {
+    async function loadOrnaments() {
+      const { data, error } = await supabase.from("ornaments").select("*");
+      if (!error && data) {
+        const loaded: OrnamentData[] = data.map((d) => ({
+          position: [Number(d.x), Number(d.y), Number(d.z)] as [number, number, number],
+          country: String(d.country),
+          message: String(d.message),
+        }));
+        setOrnaments(loaded);
+      } else {
+        console.error("読み込みエラー:", error);
       }
-    )
-    .subscribe();
-
-  return () => {
-    supabase.removeChannel(channel);
-  };
-}, []);
-
-
+    }
+    loadOrnaments();
+  }, []);
 
   // 🔄 リアルタイム反映
   useEffect(() => {
@@ -63,13 +51,13 @@ useEffect(() => {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "ornaments" },
         (payload) => {
-          const d = payload.new;
-          const newOrnament = {
-            position: [d.x, d.y, d.z],
+          const d = payload.new as { x: number; y: number; z: number; country: string; message: string };
+          const newOrnament: OrnamentData = {
+            position: [Number(d.x), Number(d.y), Number(d.z)],
             country: d.country,
             message: d.message,
           };
-          setOrnaments((prev) => [...prev, newOrnament]);
+          setOrnaments((prev: OrnamentData[]) => [...prev, newOrnament]);
         }
       )
       .subscribe();
@@ -102,13 +90,13 @@ useEffect(() => {
 
   const allOrnaments = [...baseOrnaments, ...ornaments];
 
-  // 🧭 オーナメント追加（クリック位置優先）
+  // 🧭 オーナメント追加
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     let x, y, z;
 
     if (clickPos) {
-      [x, y, z] = clickPos; // クリック位置
+      [x, y, z] = clickPos;
     } else {
       const height = Math.random() * 6;
       const radius = 2.5 * (1 - height / 6);
@@ -119,13 +107,12 @@ useEffect(() => {
     }
 
     const newOrnament: OrnamentData = { position: [x, y, z], country, message };
-    setOrnaments((prev) => [...prev, newOrnament]);
+    setOrnaments((prev: OrnamentData[]) => [...prev, newOrnament]);
     setMessage("");
     setClickPos(null);
 
     const { error } = await supabase.from("ornaments").insert([{ x, y, z, country, message }]);
     if (error) console.error("保存エラー:", error);
-    else console.log("✅ Supabaseに保存成功!");
   };
 
   // 🖼️ レンダリング
@@ -160,24 +147,18 @@ useEffect(() => {
           <meshStandardMaterial color="#1f8d3a" />
         </mesh>
 
-        {/* 🖱️ クリックで位置選択（追加モード時のみ） */}
+        {/* 🖱️ クリックで位置選択 */}
         {isAdding && (
           <mesh
             position={[0, 0, 0]}
             onClick={(e) => {
-  e.stopPropagation();
-
-  // ツリー表面より少し外にずらす（法線方向に）
-  const normal = e.face?.normal.clone().applyNormalMatrix(e.object.normalMatrix);
-  const offset = normal ? normal.multiplyScalar(0.25) : new THREE.Vector3(0, 0, 0);
-  const pos = e.point.clone().add(offset);
-
-  setClickPos([pos.x, pos.y, pos.z]);
-  setIsAdding(false);
-
-  console.log("クリック座標（補正後）:", pos);
-}}
-
+              e.stopPropagation();
+              const normal = e.face?.normal.clone().applyNormalMatrix(e.object.normalMatrix);
+              const offset = normal ? normal.multiplyScalar(0.25) : new THREE.Vector3(0, 0, 0);
+              const pos = e.point.clone().add(offset);
+              setClickPos([pos.x, pos.y, pos.z]);
+              setIsAdding(false);
+            }}
             visible={false}
           >
             <coneGeometry args={[2.5, 6, 64]} />
@@ -194,33 +175,29 @@ useEffect(() => {
         )}
 
         {/* オーナメント */}
-        {allOrnaments.map((o, i) => {
-          const isNew = i >= baseOrnaments.length;
-          return (
-            <mesh key={i} position={o.position} onClick={() => setSelected(o)}>
-              <sphereGeometry args={[0.12, 16, 16]} />
-              <meshStandardMaterial
-                emissive={isNew ? "#00ff00" : "#ff4081"}
-                emissiveIntensity={2}
-                color={isNew ? "#00ff88" : "#ff8da1"}
-              />
-            </mesh>
-          );
-        })}
+        {allOrnaments.map((o, i) => (
+          <mesh key={i} position={o.position} onClick={() => setSelected(o)}>
+            <sphereGeometry args={[0.12, 16, 16]} />
+            <meshStandardMaterial
+              emissive={i >= baseOrnaments.length ? "#00ff00" : "#ff4081"}
+              emissiveIntensity={2}
+              color={i >= baseOrnaments.length ? "#00ff88" : "#ff8da1"}
+            />
+          </mesh>
+        ))}
 
         <OrbitControls />
       </Canvas>
 
       {/* ✨ モード中オーバーレイ */}
       {isAdding && (
-  <div
-    className="absolute inset-0 flex items-center justify-center bg-black/50 text-white text-xl font-bold z-10"
-    style={{ pointerEvents: "none" }} // 👈 この行を追加！
-  >
-    ✨ ツリーの上をクリックしてオーナメントを置く場所を選んでください ✨
-  </div>
-)}
-
+        <div
+          className="absolute inset-0 flex items-center justify-center bg-black/50 text-white text-xl font-bold z-10"
+          style={{ pointerEvents: "none" }}
+        >
+          ✨ ツリーの上をクリックしてオーナメントを置く場所を選んでください ✨
+        </div>
+      )}
 
       {/* 💬 メッセージポップアップ */}
       {selected && (
