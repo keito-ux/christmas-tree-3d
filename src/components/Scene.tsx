@@ -26,22 +26,27 @@ export default function Scene() {
   const [isAdding, setIsAdding] = useState(false); // ← 追加モードON/OFF
 
   // 🎄 Supabaseから読み込み
-  useEffect(() => {
-    async function loadOrnaments() {
-      const { data, error } = await supabase.from("ornaments").select("*");
-      if (!error && data) {
-        const loaded = data.map((d) => ({
-          position: [d.x, d.y, d.z],
-          country: d.country,
-          message: d.message,
-        }));
-        setOrnaments(loaded);
-      } else {
-        console.error("読み込みエラー:", error);
-      }
+useEffect(() => {
+  async function loadOrnaments() {
+    const { data, error } = await supabase.from("ornaments").select("*");
+    if (!error && data) {
+      const loaded = data.map((d): OrnamentData => ({
+        position: [
+          Number(d.x ?? 0),
+          Number(d.y ?? 0),
+          Number(d.z ?? 0),
+        ] as [number, number, number],
+        country: String(d.country ?? ""),
+        message: String(d.message ?? ""),
+      }));
+      setOrnaments(loaded as OrnamentData[]);
+    } else {
+      console.error("読み込みエラー:", error);
     }
-    loadOrnaments();
-  }, []);
+  }
+  loadOrnaments();
+}, []);
+
 
   // 🔄 リアルタイム反映
   useEffect(() => {
