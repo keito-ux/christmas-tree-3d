@@ -27,25 +27,28 @@ export default function Scene() {
 
   // 🎄 Supabaseから読み込み
 useEffect(() => {
-  async function loadOrnaments() {
-    const { data, error } = await supabase.from("ornaments").select("*");
-    if (!error && data) {
-      const loaded = data.map((d): OrnamentData => ({
-        position: [
-          Number(d.x ?? 0),
-          Number(d.y ?? 0),
-          Number(d.z ?? 0),
-        ] as [number, number, number],
-        country: String(d.country ?? ""),
-        message: String(d.message ?? ""),
-      }));
-      setOrnaments(loaded as OrnamentData[]);
-    } else {
-      console.error("読み込みエラー:", error);
-    }
-  }
-  loadOrnaments();
+  const channel = supabase
+    .channel("ornaments-changes")
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "ornaments" },
+      (payload) => {
+        const d = payload.new;
+        const newOrnament: OrnamentData = {
+          position: [d.x as number, d.y as number, d.z as number],
+          country: d.country as string,
+          message: d.message as string,
+        };
+        setOrnaments((prev: OrnamentData[]) => [...prev, newOrnament]);
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
 }, []);
+
 
 
   // 🔄 リアルタイム反映
