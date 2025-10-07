@@ -128,15 +128,17 @@ export default function Scene() {
 
         {/* 雪 */}
         <points>
-          <bufferGeometry>
-            <bufferAttribute
-              attach="attributes-position"
-              count={500}
-              array={new Float32Array(
-                Array.from({ length: 500 * 3 }, () => (Math.random() - 0.5) * 40)
-              )}
-              itemSize={3}
-            />
+          <bufferAttribute
+  attach="attributes-position"
+  args={[
+    new Float32Array(
+      Array.from({ length: 500 * 3 }, () => (Math.random() - 0.5) * 40)
+    ),
+    3,
+  ]}
+/>
+
+
           </bufferGeometry>
           <pointsMaterial color="white" size={0.1} sizeAttenuation />
         </points>
